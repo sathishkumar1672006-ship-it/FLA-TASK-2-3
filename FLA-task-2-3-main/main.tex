@@ -1,0 +1,927 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage[a4paper,margin=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\definecolor{hdr}{HTML}{D9E2F3}
+\definecolor{navy}{HTML}{1F2F4F}
+\linespread{1.1}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\titleformat{\section}{\normalfont\fontsize{16}{20}\bfseries\color{navy}}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\normalfont\fontsize{14}{18}\bfseries\color{navy}}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{14pt}{6pt}
+\titlespacing*{\subsection}{0pt}{12pt}{4pt}
+\captionsetup{font=small,labelfont=bf,labelsep=colon,skip=4pt}
+\setlist[itemize]{noitemsep,topsep=2pt,leftmargin=1.5em}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.3pt}
+\fancyhead[R]{\footnotesize\itshape 21CSC301T -- Formal Language and Automata \textbar{} CLA-2 \textbar{} Joe Andrew S (RA2411026050215)}
+\fancyfoot[C]{\thepage}
+\begin{document}
+
+\begin{titlepage}
+\thispagestyle{empty}
+\centering
+\includegraphics[width=2.5in]{figures/logo.png}\par\vspace{14pt}
+{\bfseries\fontsize{19}{24}\selectfont DESIGNING FINITE AUTOMATA AND\\PUSHDOWN AUTOMATA FOR REAL-TIME\\VALIDATION AND LANGUAGE RECOGNITION\par}
+\vspace{12pt}
+{\itshape Continuous Learning Assessment -- 2 (CLA-2): Tasks 2 and 3 (Individual Work)\par}
+\vspace{10pt}
+{\bfseries A COURSE ASSIGNMENT REPORT\par}
+{\itshape submitted for the course\par}
+{\bfseries\large 21CSC301T -- FORMAL LANGUAGE AND AUTOMATA\par}
+\vspace{16pt}
+{\itshape Submitted by\par}
+{\bfseries\large JOE ANDREW S\par}
+{\bfseries Register Number: RA2411026050215\par}
+\vspace{12pt}
+{\itshape Under the guidance of\par}
+{\bfseries Dr. C. GUNASUNDARI\par}
+Assistant Professor, Department of AIML\par
+\vspace{10pt}
+III Year / V Semester / Section: [to be filled in]\par
+Academic Year 2026--2027\par
+\vspace{8pt}
+B.Tech. Computer Science and Engineering with Specialization in\\Artificial Intelligence and Machine Learning\par
+\vspace{14pt}
+{\bfseries SCHOOL OF COMPUTING\par FACULTY OF ENGINEERING AND TECHNOLOGY\par SRM INSTITUTE OF SCIENCE AND TECHNOLOGY\par TIRUCHIRAPPALLI -- 621105\par}
+\vspace{10pt}
+{\bfseries NOVEMBER 2026\par}
+\end{titlepage}
+\newpage
+\renewcommand{\contentsname}{Table of Contents}
+\tableofcontents
+\listoffigures
+\listoftables
+\newpage
+
+\section{Introduction}
+
+Software has to decide, many times a second, whether a piece of input has the right shape. An ATM keypad must decide whether four typed characters can be a PIN, a sign-up form must decide whether a password follows the policy, and a program checker must decide whether the brackets in a data record are matched. This report shows how such decisions can be described exactly with automata, the simple machines studied in Formal Language and Automata (21CSC301T) [1].
+
+The report has two parts. \textbf{Task 2} designs deterministic finite automata (DFAs) for three input-validation problems: ATM PIN verification, password policy validation and e-mail format validation. A DFA reads the input once from left to right and remembers only its current state, so it suits rules that need a fixed amount of memory. \textbf{Task 3} uses context-free grammars (CFGs) and pushdown automata (PDAs) for three case studies in which the machine must count or match without any fixed limit: strings with equal numbers of 0s and 1s, DNA sequences that equal their own reverse complement, and balanced brackets in a data sequence. A PDA is a finite automaton with a stack, and the stack gives it the extra memory that these problems need.
+
+Every design follows the same plan: define the input alphabet and the language, build the automaton, show it in a simple diagram and a transition table, test it with at least five accepted and five rejected inputs, trace one accepted and one rejected input step by step, and state what the model cannot do. The work is aligned with SDG 9 (Industry, Innovation and Infrastructure) at the Design Alignment level, because small and provably correct checking logic is useful in low-cost devices and web forms.
+
+\section{Notation and Symbols}
+
+The notation follows the course notes of 21CSC301T (Units 1--3) [5] and is used in the same way throughout the report.
+
+{\small
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.2700\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.7300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Symbols and conventions used in this report]{Symbols and conventions used in this report}\label{tab:notation}\\
+\hline
+\rowcolor{hdr}\textbf{Symbol} & \textbf{Meaning}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Symbol} & \textbf{Meaning}\\ \hline
+\endhead
+DFA  M = (Q, \ensuremath{\Sigma}, \ensuremath{\delta}, q\textsubscript{0}, F) & Q = set of states, \ensuremath{\Sigma} = input alphabet, \ensuremath{\delta} = transition function, q\textsubscript{0} = start state, F = set of final (accepting) states.\\ \hline
+\ensuremath{\delta}(q, a) = p & In state q, after reading a, the DFA moves to state p.\\ \hline
+Classifier h & A function that turns each typed character into one symbol of a small alphabet (for example, every digit becomes D).\\ \hline
+PDA  P = (Q, \ensuremath{\Sigma}, \ensuremath{\Gamma}, \ensuremath{\delta}, q\textsubscript{0}, Z\textsubscript{0}, F) & The DFA parts plus the stack alphabet \ensuremath{\Gamma} and the bottom-of-stack symbol Z\textsubscript{0}.\\ \hline
+\ensuremath{\delta}(q, a, X) = \{(p, \ensuremath{\gamma})\} & In state q, reading a, with X on top of the stack: go to state p and replace X by the string \ensuremath{\gamma}. \ensuremath{\gamma} = \ensuremath{\varepsilon} means ``pop X''; \ensuremath{\gamma} = aX means ``push a''. Stacks are written top first.\\ \hline
+Diagram label  a, X | \ensuremath{\gamma} & Read a (or \ensuremath{\varepsilon}), the stack top is X, replace X by \ensuremath{\gamma}.\\ \hline
+\ensuremath{\varepsilon} & The empty string (no input is read).\\ \hline
+CFG  G = (V, T, P, S) & V = variables, T = terminals, P = productions, S = start symbol.\\ \hline
+\ensuremath{\Rightarrow} & One derivation step. A leftmost derivation always replaces the leftmost variable.\\ \hline
+L(M), L(P), L(G) & The language accepted by M or P, or generated by G.\\ \hline
+Start and final states & An arrow with the word ``start'' marks the start state; a double circle marks a final state.\\ \hline
+q\textsubscript{d} (dead state) & A trap state with no way out. In DFA diagrams its arrows are left out and explained in a note; the transition table lists them.\\ \hline
+Acceptance & A DFA accepts if it ends in a final state. A PDA accepts if the input is finished and the PDA is in a final state.\\ \hline
+(L + D)\textsuperscript{+} & In patterns, ``+'' between symbols means ``or'', and a superscript + means ``one or more times''.\\ \hline
+\end{longtable}}
+
+\section{Task 2 -- Real-Time Applications of Finite Automata}
+
+\subsection{Task 2 Introduction}
+
+Input validation means checking that typed data has the expected shape before the rest of an application uses it. Many such rules are regular languages, so a DFA can decide them. A nondeterministic finite automaton (NFA) may have several choices for one input and is often shorter to write, but it recognises exactly the same languages; the DFA is the form that is actually executed, so all validators in this part are DFAs.
+
+\textbf{Character classes.} A DFA with one arrow for each of the ten digits would be hard to read. Instead, a classifier h first maps every typed character to one symbol of a small alphabet, and the DFA reads only these symbols. For example, h maps each digit to D and every unlisted character to O (``other''). A DFA is complete, so every move that is not drawn goes to a dead state q\textsubscript{d}. Dead-state arrows are not drawn in the diagrams, and the transition tables list them in full.
+
+\textbf{How each application is presented.} Each application below gives the introduction, problem, real-world use, alphabet, character classes, formal language, DFA design, diagram, transition table, tested inputs, input and output verification, an execution trace, limitations and a short conclusion.
+
+\subsection{Application 1 -- ATM PIN Verification}
+
+\textbf{Introduction.} Before an ATM sends anything to the bank, its keypad software makes a quick local check that the typed PIN has the right shape. This application builds the DFA for that check.
+
+\textbf{Problem definition.} A PIN is valid in this model if it is exactly four characters long and every character is a digit from 0 to 9. Leading zeros are allowed. Letters, spaces and symbols are not allowed.
+
+\textbf{Real-world application.} Keypad firmware in ATMs and card machines rejects entries of the wrong length or with wrong characters at once. This saves a network request to the bank and lets the screen show a clear message such as ``PIN must be four digits''.
+
+\textbf{Input alphabet.} \ensuremath{\Sigma} = \{D, O\}.
+
+{\small
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.1400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4600\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4000\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Character classification for the PIN DFA]{Character classification for the PIN DFA}\label{tab:pin_classes}\\
+\hline
+\rowcolor{hdr}\textbf{Class} & \textbf{Characters} & \textbf{Examples}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Class} & \textbf{Characters} & \textbf{Examples}\\ \hline
+\endhead
+D & The ten digits 0--9 & \texttt{0}, \texttt{7}, \texttt{9}\\ \hline
+O & Every other character & \texttt{A}, \texttt{x}, space, \texttt{{-}}, \texttt{\#}\\ \hline
+\end{longtable}}
+
+\textbf{Formal language.} A typed string w is a valid PIN when its classified form h(w) is DDDD. So L\textsubscript{PIN} = \{ w | h(w) = DDDD \}. Over \ensuremath{\Sigma} this language has a single string, DDDD, but that one string stands for all 10\textsuperscript{4} = 10,000 possible digit PINs.
+
+\textbf{DFA construction.} M\textsubscript{PIN} = (Q, \ensuremath{\Sigma}, \ensuremath{\delta}, q\textsubscript{0}, F) with Q = \{q\textsubscript{0}, q\textsubscript{1}, q\textsubscript{2}, q\textsubscript{3}, q\textsubscript{4}, q\textsubscript{d}\}, start state q\textsubscript{0} and F = \{q\textsubscript{4}\}. In simple English, the states mean:
+
+\begin{itemize}
+\item q\textsubscript{0} -- nothing has been typed yet.
+\item q\textsubscript{1}, q\textsubscript{2}, q\textsubscript{3} -- one, two or three digits have been typed and no mistake has been made.
+\item q\textsubscript{4} -- exactly four digits have been typed. This is the only accepting state.
+\item q\textsubscript{d} -- a mistake has happened (a non-digit, or a fifth digit). No later input can repair it.
+\end{itemize}
+
+\begin{figure}[H]\centering\includegraphics[width=6.35in]{figures/pin_dfa.png}\caption[DFA for ATM PIN verification]{DFA for ATM PIN verification. Each D moves one step to the right; q\textsubscript{4} (double circle) accepts. Dead-state arrows are omitted.}\label{fig:pin}\end{figure}
+
+\textbf{Transition table.} The table below is the complete \ensuremath{\delta}, including the dead state that the diagram leaves out.
+
+{\small
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.3400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.3300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.3300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Transition table of MPIN (complete)]{Transition table of M\textsubscript{PIN} (complete)}\label{tab:pin_delta}\\
+\hline
+\rowcolor{hdr}\textbf{\ensuremath{\delta}} & \textbf{D} & \textbf{O}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{\ensuremath{\delta}} & \textbf{D} & \textbf{O}\\ \hline
+\endhead
+\ensuremath{\rightarrow} q\textsubscript{0} & q\textsubscript{1} & q\textsubscript{d}\\ \hline
+q\textsubscript{1} & q\textsubscript{2} & q\textsubscript{d}\\ \hline
+q\textsubscript{2} & q\textsubscript{3} & q\textsubscript{d}\\ \hline
+q\textsubscript{3} & q\textsubscript{4} & q\textsubscript{d}\\ \hline
+* q\textsubscript{4} & q\textsubscript{d} & q\textsubscript{d}\\ \hline
+q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d}\\ \hline
+\end{longtable}}
+
+\textbf{Accepted inputs, rejected inputs and input verification.} Table \ref{tab:pin_tests} lists five accepted and five rejected inputs. For every input the table shows what the DFA actually reads, which is the classified string h(w).
+
+{\small
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.0500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1200\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Test inputs for the PIN DFA (1--5 accepted, 6--10 rejected)]{Test inputs for the PIN DFA (1--5 accepted, 6--10 rejected)}\label{tab:pin_tests}\\
+\hline
+\rowcolor{hdr}\textbf{\#} & \textbf{Input} & \textbf{h(w)} & \textbf{Final state} & \textbf{Output} & \textbf{Reason}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{\#} & \textbf{Input} & \textbf{h(w)} & \textbf{Final state} & \textbf{Output} & \textbf{Reason}\\ \hline
+\endhead
+1 & \texttt{2468} & DDDD & q\textsubscript{4} & Accepted & Four digits, all different\\ \hline
+2 & \texttt{9014} & DDDD & q\textsubscript{4} & Accepted & Four digits\\ \hline
+3 & \texttt{3070} & DDDD & q\textsubscript{4} & Accepted & Zeros inside a PIN are allowed\\ \hline
+4 & \texttt{6613} & DDDD & q\textsubscript{4} & Accepted & Repeated digits are allowed\\ \hline
+5 & \texttt{1001} & DDDD & q\textsubscript{4} & Accepted & Starts and ends with the same digit\\ \hline
+6 & \texttt{530} & DDD & q\textsubscript{3} & Rejected & Only three digits: stops in q\textsubscript{3}, which is not final\\ \hline
+7 & \texttt{53091} & DDDDD & q\textsubscript{d} & Rejected & Fifth digit sends q\textsubscript{4} to q\textsubscript{d}\\ \hline
+8 & \texttt{5A09} & DODD & q\textsubscript{d} & Rejected & The letter A is class O: q\textsubscript{1} to q\textsubscript{d}\\ \hline
+9 & \texttt{98{-}76} & DDODD & q\textsubscript{d} & Rejected & The hyphen is class O: q\textsubscript{2} to q\textsubscript{d}\\ \hline
+10 & \ensuremath{\varepsilon} (empty) & \ensuremath{\varepsilon} & q\textsubscript{0} & Rejected & Nothing typed: stays in q\textsubscript{0}\\ \hline
+\end{longtable}}
+
+\textbf{Output verification.} The output is ``Accepted'' exactly when the final state is q\textsubscript{4}, and this agrees with the language definition: h(w) = DDDD holds only for four-digit strings. The accepted inputs all have four digits. The rejected inputs fail for one of three reasons: too few digits (the DFA stops in q\textsubscript{1}, q\textsubscript{2} or q\textsubscript{3}), too many digits, or a non-digit character (both lead to q\textsubscript{d}).
+
+\textbf{Short execution trace.} Table \ref{tab:pin_trace} follows one accepted and one rejected input.
+
+{\small
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.1100\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.3800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.3600\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Execution trace of MPIN]{Execution trace of M\textsubscript{PIN}}\label{tab:pin_trace}\\
+\hline
+\rowcolor{hdr}\textbf{Input} & \textbf{Symbols read} & \textbf{State path} & \textbf{Output}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Input} & \textbf{Symbols read} & \textbf{State path} & \textbf{Output}\\ \hline
+\endhead
+\texttt{2468} & D  D  D  D & q\textsubscript{0} \ensuremath{\rightarrow} q\textsubscript{1} \ensuremath{\rightarrow} q\textsubscript{2} \ensuremath{\rightarrow} q\textsubscript{3} \ensuremath{\rightarrow} q\textsubscript{4} & Accepted: q\textsubscript{4} \ensuremath{\in} F\\ \hline
+\texttt{5A09} & D  O  D  D & q\textsubscript{0} \ensuremath{\rightarrow} q\textsubscript{1} \ensuremath{\rightarrow} q\textsubscript{d} \ensuremath{\rightarrow} q\textsubscript{d} \ensuremath{\rightarrow} q\textsubscript{d} & Rejected: q\textsubscript{d} \ensuremath{\notin} F; the letter A (class O) sent the DFA to q\textsubscript{d}\\ \hline
+\end{longtable}}
+
+\textbf{Limitations.} M\textsubscript{PIN} checks only the shape of the PIN. It cannot tell whether 2468 is the right PIN for this card; that needs the bank's secure records, a retry counter and a card-block rule. It also accepts weak PINs such as 0000, and blocking them is a separate policy rule. The DFA runs first, and only an accepted PIN is passed on to the authentication service.
+
+\textbf{Conclusion.} A five-state chain counts exactly four digits. The diagram needs only forward arrows, and the transition table adds the dead state for completeness.
+
+\subsection{Application 2 -- Password Policy Validation}
+
+\textbf{Introduction.} A password policy is a list of rules that all have to hold at the same time. Drawing one big machine for all of them would be confusing, so this application splits the policy into five small machines (modules) that read the password together.
+
+\textbf{Problem definition.} A password is accepted only if all of the following rules hold:
+
+\begin{itemize}
+\item its length is between 8 and 16 characters (both included);
+\item it contains at least one uppercase letter;
+\item it contains at least one lowercase letter;
+\item it contains at least one digit;
+\item it contains at least one special character from \{ ! @ \# \$ \% \textasciicircum{} \& * \_ - \}.
+\end{itemize}
+
+\textbf{Real-world application.} Sign-up pages, change-password screens and operating-system login policies check the password while it is typed and tell the user which rule is still missing.
+
+\textbf{Input alphabet.} \ensuremath{\Sigma} = \{U, L, D, S, O\}.
+
+{\small
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.1200\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Character classification for the password DFA]{Character classification for the password DFA}\label{tab:pw_classes}\\
+\hline
+\rowcolor{hdr}\textbf{Class} & \textbf{Characters} & \textbf{Meaning}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Class} & \textbf{Characters} & \textbf{Meaning}\\ \hline
+\endhead
+U & A--Z & uppercase letter\\ \hline
+L & a--z & lowercase letter\\ \hline
+D & 0--9 & digit\\ \hline
+S & \texttt{! @ \# \$ \% \textasciicircum{} \& * \_ {-}} & special character allowed by the policy\\ \hline
+O & everything else, including space & not allowed in a password\\ \hline
+\end{longtable}}
+
+\textbf{Formal language.} L\textsubscript{PWD} = \{ w \ensuremath{\in} \{U, L, D, S\}\textsuperscript{*} | 8 \ensuremath{\leq} |w| \ensuremath{\leq} 16, and w has at least one U, one L, one D and one S \}. In words: only the four allowed classes appear, the length is in the range 8 to 16, and each of the four classes appears at least once. The language is the meeting point (intersection) of five simpler languages, one for each module: L\textsubscript{PWD} = L\textsubscript{len} \ensuremath{\cap} L\textsubscript{U} \ensuremath{\cap} L\textsubscript{L} \ensuremath{\cap} L\textsubscript{D} \ensuremath{\cap} L\textsubscript{S}.
+
+\textbf{DFA construction (modular representation).} The five modules read every character at the same time, as shown in Fig. \ref{fig:pw_block}. The password is accepted only when all five modules accept.
+
+\begin{figure}[H]\centering\includegraphics[width=6.60in]{figures/pw_block.png}\caption[Modular view of the password DFA: one classifier feeds five small modules, and the password is accepted when all five accept]{Modular view of the password DFA: one classifier feeds five small modules, and the password is accepted when all five accept.}\label{fig:pw_block}\end{figure}
+
+\begin{itemize}
+\item \textbf{Flag modules M\textsubscript{U}, M\textsubscript{L}, M\textsubscript{D}, M\textsubscript{S}.} Each has two states, N (``not seen yet'') and Y (``seen''), as in Fig. \ref{fig:pw_flag}. The state moves from N to Y the first time its own class appears and stays at Y for ever. A module accepts in state Y.
+\item \textbf{Length module M\textsubscript{len}.} It counts the characters read, n. It accepts when 8 \ensuremath{\leq} n \ensuremath{\leq} 16. A character of class O, or a 17th character, sends it to the dead state. Fig. \ref{fig:pw_len} draws the counter by zones: Short (n < 8), OK (8 \ensuremath{\leq} n \ensuremath{\leq} 16) and Dead.
+\end{itemize}
+
+\begin{figure}[H]\centering\includegraphics[width=3.62in]{figures/pw_flag.png}\caption[Flag module for one class X (X is U, L, D or S)]{Flag module for one class X (X is U, L, D or S). Each of the four flag modules has this shape.}\label{fig:pw_flag}\end{figure}
+
+\begin{figure}[H]\centering\includegraphics[width=6.21in]{figures/pw_len.png}\caption[Length module drawn by zones]{Length module drawn by zones. It counts characters 1 to 16; the 17th character, or any O, leads to the dead state.}\label{fig:pw_len}\end{figure}
+
+Running the five modules together is the same as running one DFA whose state is the tuple (n, u, l, d, s), with at most 17 \ensuremath{\times} 16 + 1 = 273 states. That machine is not drawn, because the modules give the same answer and are much easier to understand.
+
+\textbf{Transition table.} Table \ref{tab:pw_delta} shows how each class changes the modules.
+
+{\small
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.2400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.2200\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[How each character class updates the five modules (Y stays Y)]{How each character class updates the five modules (Y stays Y)}\label{tab:pw_delta}\\
+\hline
+\rowcolor{hdr}\textbf{Class} & \textbf{M\textsubscript{len} (count n)} & \textbf{M\textsubscript{U}} & \textbf{M\textsubscript{L}} & \textbf{M\textsubscript{D}} & \textbf{M\textsubscript{S}}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Class} & \textbf{M\textsubscript{len} (count n)} & \textbf{M\textsubscript{U}} & \textbf{M\textsubscript{L}} & \textbf{M\textsubscript{D}} & \textbf{M\textsubscript{S}}\\ \hline
+\endhead
+U & n \ensuremath{\rightarrow} n + 1 & N \ensuremath{\rightarrow} Y & stays & stays & stays\\ \hline
+L & n \ensuremath{\rightarrow} n + 1 & stays & N \ensuremath{\rightarrow} Y & stays & stays\\ \hline
+D & n \ensuremath{\rightarrow} n + 1 & stays & stays & N \ensuremath{\rightarrow} Y & stays\\ \hline
+S & n \ensuremath{\rightarrow} n + 1 & stays & stays & stays & N \ensuremath{\rightarrow} Y\\ \hline
+O & to Dead & -- & -- & -- & --\\ \hline
+17th counted character & to Dead & -- & -- & -- & --\\ \hline
+\textbf{Accepts when} & 8 \ensuremath{\leq} n \ensuremath{\leq} 16 & Y & Y & Y & Y\\ \hline
+\end{longtable}}
+
+\textbf{Accepted inputs, rejected inputs and input verification.} Table \ref{tab:pw_tests} gives five accepted and seven rejected passwords. The rejected ones break the rules one at a time, so every rule is tested. The columns U, L, D and S show whether the class occurs in the password (1) or not (0).
+
+{\footnotesize
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.0400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2200\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.0800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.0400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.0400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.0400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.0400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1100\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.3900\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Test inputs for the password DFA (1--5 accepted, 6--12 rejected)]{Test inputs for the password DFA (1--5 accepted, 6--12 rejected)}\label{tab:pw_tests}\\
+\hline
+\rowcolor{hdr}\textbf{\#} & \textbf{Password} & \textbf{Length} & \textbf{U} & \textbf{L} & \textbf{D} & \textbf{S} & \textbf{Output} & \textbf{Reason}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{\#} & \textbf{Password} & \textbf{Length} & \textbf{U} & \textbf{L} & \textbf{D} & \textbf{S} & \textbf{Output} & \textbf{Reason}\\ \hline
+\endhead
+1 & \texttt{Qm7\$tPlz} & 8 & 1 & 1 & 1 & 1 & Accepted & Length 8 (lower limit); all four classes\\ \hline
+2 & \texttt{Trichy@2026} & 11 & 1 & 1 & 1 & 1 & Accepted & Length 11; U, L, D and S all present\\ \hline
+3 & \texttt{Code\_Lab{-}42x} & 12 & 1 & 1 & 1 & 1 & Accepted & Length 12; \_ and - are both special characters\\ \hline
+4 & \texttt{Nine\&Nine*99Zz} & 14 & 1 & 1 & 1 & 1 & Accepted & Length 14; two special characters\\ \hline
+5 & \texttt{Ab1!Cd2@Ef3\#Gh4\$} & 16 & 1 & 1 & 1 & 1 & Accepted & Length 16 (upper limit); all four classes\\ \hline
+6 & \texttt{Ab1!xyz} & 7 & 1 & 1 & 1 & 1 & Rejected & Length 7: too short, M\textsubscript{len} stays in Short\\ \hline
+7 & \texttt{Ab1!Cd2@Ef3\#Gh4\$Z} & 17 & 1 & 1 & 1 & 1 & Rejected & Length 17: the 17th character sends M\textsubscript{len} to Dead\\ \hline
+8 & \texttt{trichy@2026} & 11 & 0 & 1 & 1 & 1 & Rejected & No uppercase letter: M\textsubscript{U} ends in N\\ \hline
+9 & \texttt{TRICHY@2026} & 11 & 1 & 0 & 1 & 1 & Rejected & No lowercase letter: M\textsubscript{L} ends in N\\ \hline
+10 & \texttt{Trichy@Chennai} & 14 & 1 & 1 & 0 & 1 & Rejected & No digit: M\textsubscript{D} ends in N\\ \hline
+11 & \texttt{Trichy2026} & 10 & 1 & 1 & 1 & 0 & Rejected & No special character: M\textsubscript{S} ends in N\\ \hline
+12 & \texttt{Trichy @2026} & 12 & 1 & 1 & 1 & 1 & Rejected & The space is class O: M\textsubscript{len} goes to Dead\\ \hline
+\end{longtable}}
+
+\textbf{Output verification.} A password is ``Accepted'' only when the length lies in 8--16, no character is of class O, and the four flag columns are all 1. Each rejected password in Table \ref{tab:pw_tests} fails exactly one of these conditions, and each accepted password meets all of them, so the outputs agree with the formal language L\textsubscript{PWD}.
+
+\textbf{Short execution trace.} Table \ref{tab:pw_trace} shows the state (n, u, l, d, s) after each character of one accepted password and after each group of characters of one rejected password. Here u, l, d and s are the flags of M\textsubscript{U}, M\textsubscript{L}, M\textsubscript{D} and M\textsubscript{S} (1 = Y, 0 = N).
+
+{\footnotesize
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.1700\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1000\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.0900\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.2400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4000\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Execution trace of the password modules]{Execution trace of the password modules}\label{tab:pw_trace}\\
+\hline
+\rowcolor{hdr}\textbf{Password} & \textbf{Read} & \textbf{Class} & \textbf{State (n, u, l, d, s)} & \textbf{Result}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Password} & \textbf{Read} & \textbf{Class} & \textbf{State (n, u, l, d, s)} & \textbf{Result}\\ \hline
+\endhead
+\texttt{Qm7\$tPlz} & \texttt{Q} & U & (1, 1, 0, 0, 0) & \\ \hline
+ & \texttt{m} & L & (2, 1, 1, 0, 0) & \\ \hline
+ & \texttt{7} & D & (3, 1, 1, 1, 0) & \\ \hline
+ & \texttt{\$} & S & (4, 1, 1, 1, 1) & \\ \hline
+ & \texttt{tPlz} & L U L L & (8, 1, 1, 1, 1) & n = 8 and all four flags are 1: \textbf{Accepted}\\ \hline
+\texttt{Trichy2026} & \texttt{T} & U & (1, 1, 0, 0, 0) & \\ \hline
+ & \texttt{richy} & L & (6, 1, 1, 0, 0) & \\ \hline
+ & \texttt{2026} & D & (10, 1, 1, 1, 0) & n = 10 is fine, but s = 0 (no special character): \textbf{Rejected}\\ \hline
+\end{longtable}}
+
+\textbf{Limitations.} The modules check only the structure of the password. A password such as Password@1 meets every rule but is a very common choice, and a DFA cannot know that it appears in lists of leaked passwords; that check needs outside data and runs after the DFA accepts. NIST SP 800-63B [3] also advises giving more weight to length and block lists than to composition rules alone, so this DFA is a cheap first filter and not a complete security policy.
+
+\textbf{Conclusion.} Splitting the policy into a length counter and four yes/no flags keeps every diagram small, and the five answers combine by a simple ``all must accept'' rule. The idea also scales: a sixth rule would only need a sixth module.
+
+\subsection{Application 3 -- E-mail Format Validation}
+
+\textbf{Introduction.} Web forms check an e-mail address as soon as it is typed, so that simple typing mistakes are caught immediately. This application defines a basic e-mail format and builds a DFA for it.
+
+\textbf{Problem definition.} This model is a deliberately simple e-mail format and not the full Internet standard [4]. An address is valid when it has the form \textbf{local part @ domain . extension} with these rules:
+
+\begin{itemize}
+\item the local part (before @) has one or more letters, digits or underscores;
+\item there is exactly one @ symbol;
+\item the domain (between @ and the dot) has one or more letters or digits;
+\item there is exactly one dot, and it comes after the domain;
+\item the extension (after the dot) has two or more letters;
+\item spaces and all other characters are not allowed.
+\end{itemize}
+
+\textbf{Real-world application.} Registration, login and contact forms use such a check to catch a missing @, a missing extension or a stray space before the form is sent to the server.
+
+\textbf{Input alphabet.} \ensuremath{\Sigma} = \{L, D, US, AT, DOT, O\}.
+
+{\small
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.1400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.8600\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Character classification for the e-mail DFA]{Character classification for the e-mail DFA}\label{tab:em_classes}\\
+\hline
+\rowcolor{hdr}\textbf{Class} & \textbf{Characters}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Class} & \textbf{Characters}\\ \hline
+\endhead
+L & letters a--z and A--Z\\ \hline
+D & digits 0--9\\ \hline
+US & the underscore \texttt{\_}\\ \hline
+AT & the symbol \texttt{@}\\ \hline
+DOT & the dot \texttt{.}\\ \hline
+O & every other character, including space\\ \hline
+\end{longtable}}
+
+\textbf{Formal language.} L\textsubscript{EMAIL} = \{ w | h(w) \ensuremath{\in} (L + D + US)\textsuperscript{+} \ensuremath{\cdot} AT \ensuremath{\cdot} (L + D)\textsuperscript{+} \ensuremath{\cdot} DOT \ensuremath{\cdot} L \ensuremath{\cdot} L \ensuremath{\cdot} L\textsuperscript{*} \}. The four parts are the local part, the @ symbol, the domain, and the dot followed by an extension of at least two letters (L \ensuremath{\cdot} L \ensuremath{\cdot} L\textsuperscript{*} means two letters followed by any number of letters). Example: h(joe\_s@mail.com) = L L L US L AT L L L L DOT L L L.
+
+\textbf{DFA construction.} M\textsubscript{EMAIL} = (Q, \ensuremath{\Sigma}, \ensuremath{\delta}, q\textsubscript{0}, F) with Q = \{q\textsubscript{0}, \ldots{}, q\textsubscript{6}, q\textsubscript{d}\}, start state q\textsubscript{0} and F = \{q\textsubscript{6}\}. Table \ref{tab:em_states} explains each state.
+
+{\small
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.1800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.8200\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Meaning of the states of MEMAIL]{Meaning of the states of M\textsubscript{EMAIL}}\label{tab:em_states}\\
+\hline
+\rowcolor{hdr}\textbf{State} & \textbf{Meaning}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{State} & \textbf{Meaning}\\ \hline
+\endhead
+\ensuremath{\rightarrow} q\textsubscript{0} & Start: nothing read yet\\ \hline
+q\textsubscript{1} & Reading the local part (at least one character read)\\ \hline
+q\textsubscript{2} & The @ symbol has been read\\ \hline
+q\textsubscript{3} & Reading the domain (at least one character after @)\\ \hline
+q\textsubscript{4} & The dot has been read\\ \hline
+q\textsubscript{5} & One extension letter read\\ \hline
+* q\textsubscript{6} & Two or more extension letters read: accepting\\ \hline
+q\textsubscript{d} & A rule has been broken\\ \hline
+\end{longtable}}
+
+\begin{figure}[H]\centering\includegraphics[width=5.50in]{figures/email_dfa.png}\caption[DFA for the basic e-mail format]{DFA for the basic e-mail format. States run from left to right through local part, @, domain, dot and extension; q\textsubscript{6} (double circle) accepts.}\label{fig:email}\end{figure}
+
+\textbf{Transition table.} In Table \ref{tab:em_delta} the entry q\textsubscript{d} stands for the dead state; all those moves are left out of the diagram.
+
+{\small
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.1600\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Transition table of MEMAIL (complete)]{Transition table of M\textsubscript{EMAIL} (complete)}\label{tab:em_delta}\\
+\hline
+\rowcolor{hdr}\textbf{\ensuremath{\delta}} & \textbf{L} & \textbf{D} & \textbf{US} & \textbf{AT} & \textbf{DOT} & \textbf{O}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{\ensuremath{\delta}} & \textbf{L} & \textbf{D} & \textbf{US} & \textbf{AT} & \textbf{DOT} & \textbf{O}\\ \hline
+\endhead
+\ensuremath{\rightarrow} q\textsubscript{0} & q\textsubscript{1} & q\textsubscript{1} & q\textsubscript{1} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d}\\ \hline
+q\textsubscript{1} & q\textsubscript{1} & q\textsubscript{1} & q\textsubscript{1} & q\textsubscript{2} & q\textsubscript{d} & q\textsubscript{d}\\ \hline
+q\textsubscript{2} & q\textsubscript{3} & q\textsubscript{3} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d}\\ \hline
+q\textsubscript{3} & q\textsubscript{3} & q\textsubscript{3} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{4} & q\textsubscript{d}\\ \hline
+q\textsubscript{4} & q\textsubscript{5} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d}\\ \hline
+q\textsubscript{5} & q\textsubscript{6} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d}\\ \hline
+* q\textsubscript{6} & q\textsubscript{6} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d}\\ \hline
+q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d} & q\textsubscript{d}\\ \hline
+\end{longtable}}
+
+\textbf{Accepted inputs, rejected inputs and input verification.} For every input in Table \ref{tab:em_tests} the string is first classified by h and then read symbol by symbol, as in the example of the formal language above. The table gives five accepted and eight rejected inputs; each rejected input breaks one rule.
+
+{\small
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.0500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1100\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1200\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Test inputs for the e-mail DFA (1--5 accepted, 6--13 rejected)]{Test inputs for the e-mail DFA (1--5 accepted, 6--13 rejected)}\label{tab:em_tests}\\
+\hline
+\rowcolor{hdr}\textbf{\#} & \textbf{Input} & \textbf{Final state} & \textbf{Output} & \textbf{Reason}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{\#} & \textbf{Input} & \textbf{Final state} & \textbf{Output} & \textbf{Reason}\\ \hline
+\endhead
+1 & \texttt{joe\_s@mail.com} & q\textsubscript{6} & Accepted & Underscore allowed in the local part\\ \hline
+2 & \texttt{meera2026@campus.org} & q\textsubscript{6} & Accepted & Digits allowed in the local part\\ \hline
+3 & \texttt{a\_1@x9.io} & q\textsubscript{6} & Accepted & Shortest style: one-character parts; digit in the domain\\ \hline
+4 & \texttt{fla\_notes@srm.ac} & q\textsubscript{6} & Accepted & Extension has exactly two letters\\ \hline
+5 & \texttt{user99@site.net} & q\textsubscript{6} & Accepted & Letters and digits only\\ \hline
+6 & \texttt{joe\_smail.com} & q\textsubscript{d} & Rejected & No @: the DFA reaches q\textsubscript{1} and then the dot sends it to q\textsubscript{d}\\ \hline
+7 & \texttt{joe@@mail.com} & q\textsubscript{d} & Rejected & Second @ right after the first: q\textsubscript{2} to q\textsubscript{d}\\ \hline
+8 & \texttt{joe@mailcom} & q\textsubscript{3} & Rejected & No dot: ends in q\textsubscript{3}, not final\\ \hline
+9 & \texttt{joe@mail.c} & q\textsubscript{5} & Rejected & Extension has one letter: ends in q\textsubscript{5}, not final\\ \hline
+10 & \texttt{joe@mail.c0m} & q\textsubscript{d} & Rejected & A digit in the extension: q\textsubscript{5} to q\textsubscript{d}\\ \hline
+11 & \texttt{joe s@mail.com} & q\textsubscript{d} & Rejected & The space is class O: q\textsubscript{1} to q\textsubscript{d}\\ \hline
+12 & \texttt{joe@my\_mail.com} & q\textsubscript{d} & Rejected & Underscore is not allowed in the domain\\ \hline
+13 & \texttt{joe@mail.co.in} & q\textsubscript{d} & Rejected & A second dot is not allowed in this basic format\\ \hline
+\end{longtable}}
+
+\textbf{Output verification.} An input is ``Accepted'' exactly when the DFA ends in q\textsubscript{6}. For every accepted input, h(w) matches the pattern of the formal language; for every rejected input the table names the broken rule, so no rejected input matches the pattern.
+
+\textbf{Short execution trace.} Table \ref{tab:em_trace} shows the state after each part of one accepted and one rejected address.
+
+{\small
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.2600\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Execution trace of MEMAIL]{Execution trace of M\textsubscript{EMAIL}}\label{tab:em_trace}\\
+\hline
+\rowcolor{hdr}\textbf{Input} & \textbf{Part read} & \textbf{Classes} & \textbf{State after}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Input} & \textbf{Part read} & \textbf{Classes} & \textbf{State after}\\ \hline
+\endhead
+\texttt{joe\_s@mail.com} & \texttt{joe\_s} & L L L US L & q\textsubscript{1}\\ \hline
+ & \texttt{@} & AT & q\textsubscript{2}\\ \hline
+ & \texttt{mail} & L L L L & q\textsubscript{3}\\ \hline
+ & \texttt{.c} & DOT L & q\textsubscript{5}\\ \hline
+ & \texttt{om} & L L & q\textsubscript{6} \ensuremath{\in} F: \textbf{Accepted}\\ \hline
+\texttt{joe@mail.c0m} & \texttt{joe} & L L L & q\textsubscript{1}\\ \hline
+ & \texttt{@} & AT & q\textsubscript{2}\\ \hline
+ & \texttt{mail} & L L L L & q\textsubscript{3}\\ \hline
+ & \texttt{.c} & DOT L & q\textsubscript{5}\\ \hline
+ & \texttt{0} & D & q\textsubscript{d}\\ \hline
+ & \texttt{m} & L & q\textsubscript{d} \ensuremath{\notin} F: \textbf{Rejected}\\ \hline
+\end{longtable}}
+
+\textbf{Limitations.} M\textsubscript{EMAIL} checks syntax only. It cannot prove that the mailbox exists, that the domain accepts mail, or that the user owns the address; those need a DNS lookup or a confirmation e-mail. The basic format is also stricter than real addresses: it rejects valid ones such as name.surname@mail.co.in, because dots in the local part and several dots in the domain are not allowed here. The full format in RFC 5322 [4] also allows nested comments, which need a stack and are not a regular language.
+
+\textbf{Conclusion.} A seven-state chain with three small loops captures the local part, the @ symbol, the domain and the extension. The DFA is a quick syntax filter, and a confirmation e-mail remains the real proof.
+
+\subsection{Task 2 Comparative Analysis}
+
+{\footnotesize
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.1800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.3000\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Comparison of the three validators]{Comparison of the three validators}\label{tab:t2_compare}\\
+\hline
+\rowcolor{hdr} & \textbf{ATM PIN} & \textbf{Password policy} & \textbf{E-mail format}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr} & \textbf{ATM PIN} & \textbf{Password policy} & \textbf{E-mail format}\\ \hline
+\endhead
+Alphabet & \{D, O\} & \{U, L, D, S, O\} & \{L, D, US, AT, DOT, O\}\\ \hline
+Language in words & exactly four digits & 8--16 allowed characters with at least one U, L, D and S & local part @ domain . extension (basic format)\\ \hline
+Machine drawn & DFA: 5 states plus dead state & five small modules: a length counter and four yes/no flags & DFA: 7 states plus dead state\\ \hline
+What it remembers & how many digits so far (up to 4) & characters counted (up to 16) and four flags & which part of the address it is in\\ \hline
+Accepts when & in state q\textsubscript{4} & 8 \ensuremath{\leq} n \ensuremath{\leq} 16 and all four flags are Y & in state q\textsubscript{6}\\ \hline
+Cannot check & whether the PIN is right for the card & leaked or very common passwords & whether the mailbox exists\\ \hline
+\end{longtable}}
+
+\textbf{Why finite automata fit these rules.} Every rule needs only a fixed amount of memory: a counter with a small limit, a few yes/no flags, or the position in a fixed pattern. The check is one left-to-right pass over the input.
+
+\textbf{Syntax and semantics.} The automata decide whether a string has the right shape. Whether the PIN matches the card, whether a password was leaked and whether a mailbox exists are meaning-level rules, and ordinary program code handles them after the automaton accepts.
+
+\textbf{When a finite automaton is not enough.} A rule such as ``as many 0s as 1s'' or ``every opening bracket is closed'' needs memory that grows with the input. No fixed number of states can provide it. Task 3 studies such cases with a stack.
+
+\subsection{Task 2 Conclusion}
+
+Three real-time validation rules were written as regular languages and implemented as finite automata: a five-state counter for the PIN, five small cooperating modules for the password policy, and a seven-state chain for the e-mail format. Each design was tested with at least five accepted and five rejected inputs, traced step by step, and checked against its language. In a real system the automaton is the fast first gate, and semantic checks follow only after it accepts.
+
+\section{Task 3 -- Case Studies Using PDA and CFG}
+
+\subsection{Task 3 Introduction}
+
+A context-free grammar G = (V, T, P, S) generates strings by repeatedly replacing a variable with the right-hand side of one of its productions. A pushdown automaton is a finite automaton with a stack, and the stack is an unlimited last-in, first-out memory. Grammars and PDAs describe the same class of languages, the context-free languages [1], [2]. A finite automaton cannot count or match without limit, because its only memory is its current state, and there are only finitely many states.
+
+\textbf{Choice of case studies.} Three applications were chosen so that each one uses the stack in a different way:
+
+\begin{itemize}
+\item \textbf{Case Study 1 -- equal numbers of 0s and 1s:} the stack keeps a running count of the symbols that are still unmatched.
+\item \textbf{Case Study 2 -- DNA sequences equal to their reverse complement:} the stack stores the first half so that the second half can be checked in reverse order.
+\item \textbf{Case Study 3 -- balanced brackets in a data sequence:} the stack remembers which brackets are still open, and in which order.
+\end{itemize}
+
+\textbf{PDA conventions.} Every PDA below accepts by final state, and each case study gives the PDA as P = (Q, \ensuremath{\Sigma}, \ensuremath{\Gamma}, \ensuremath{\delta}, q\textsubscript{0}, Z\textsubscript{0}, F). Where a PDA is deterministic, two states are enough: q\textsubscript{0} means ``nothing is pending'' and q\textsubscript{1} means ``something is pending''. A separate final state would need an \ensuremath{\varepsilon}-move that competes with moves that read input, which makes the machine nondeterministic only because of the way it is drawn. Case Study 2 really needs nondeterminism and uses the usual three-state overview: a push phase, a match phase and a final state. Detailed transitions are given in a table for each PDA, and diagram labels use the form a, X | \ensuremath{\gamma}.
+
+\subsection{Case Study 1 -- Equal Number of Zeros and Ones}
+
+\textbf{Problem definition.} Decide whether a binary string contains the same number of 0s and 1s, in any order.
+
+\textbf{Practical application.} Some line-coding schemes send data in blocks where the number of 1 bits equals the number of 0 bits, so that the average signal level stays steady. A receiver can check the balance of each block with a PDA before it decodes the block.
+
+\textbf{Input alphabet.} \ensuremath{\Sigma} = \{0, 1\}.
+
+\textbf{Formal language.} L\textsubscript{eq} = \{ w \ensuremath{\in} \{0, 1\}\textsuperscript{*} | \#\textsubscript{0}(w) = \#\textsubscript{1}(w) \}, where \#\textsubscript{0}(w) is the number of 0s in w and \#\textsubscript{1}(w) the number of 1s. Examples: \ensuremath{\varepsilon}, 01, 10, 0110, 100110. Non-examples: 0, 011, 00101.
+
+\textbf{Context-free grammar.} G\textsubscript{1} = (V, T, P, S) with V = \{S\}, T = \{0, 1\}, start symbol S and productions:
+
+\begin{center}S \ensuremath{\rightarrow} 0S1  |  1S0  |  SS  |  \ensuremath{\varepsilon}\end{center}
+
+\textbf{Explanation of productions.} S \ensuremath{\rightarrow} \ensuremath{\varepsilon} says that the empty string is balanced. S \ensuremath{\rightarrow} 0S1 puts a balanced string between a 0 and a 1, and S \ensuremath{\rightarrow} 1S0 does the same in the other order. S \ensuremath{\rightarrow} SS joins two balanced strings. Each rule adds the same number of 0s and 1s, so the strings it generates are balanced.
+
+\textbf{Derivation of a sample string.} A leftmost derivation of 0110:
+
+\begin{center}S \ensuremath{\Rightarrow} SS \ensuremath{\Rightarrow} 0S1S \ensuremath{\Rightarrow} 01S \ensuremath{\Rightarrow} 011S0 \ensuremath{\Rightarrow} 0110\end{center}
+
+The string splits as 01 followed by 10, each of which is generated by one of the wrapping rules.
+
+\textbf{Parse tree.} Fig. \ref{fig:tree_eq01} shows the parse tree of 0110. Reading the leaves from left to right gives the string.
+
+\begin{figure}[H]\centering\includegraphics[width=6.50in]{figures/tree_eq01.png}\caption[Parse tree of 0110 in G1]{Parse tree of 0110 in G\textsubscript{1}. Variables are in blue, terminals in yellow, and each variable carries the production used.}\label{fig:tree_eq01}\end{figure}
+
+\textbf{PDA construction.} P\textsubscript{1} = (Q, \ensuremath{\Sigma}, \ensuremath{\Gamma}, \ensuremath{\delta}, q\textsubscript{0}, Z\textsubscript{0}, F) with Q = \{q\textsubscript{0}, q\textsubscript{1}\}, \ensuremath{\Sigma} = \{0, 1\}, \ensuremath{\Gamma} = \{0, 1, Z\textsubscript{0}\} and F = \{q\textsubscript{0}\}. The stack stores the symbols that are still unmatched. If the stack holds only Z\textsubscript{0}, the string read so far is balanced and the PDA is in q\textsubscript{0}.
+
+\textbf{PDA transition diagram.} See Fig. \ref{fig:pda_eq01}; the details are in Table \ref{tab:eq_delta}.
+
+\begin{figure}[H]\centering\includegraphics[width=6.60in]{figures/pda_eq01.png}\caption[PDA P1 for equal numbers of 0s and 1s]{PDA P\textsubscript{1} for equal numbers of 0s and 1s. q\textsubscript{0} (double circle) means balanced; q\textsubscript{1} means some symbols are unmatched.}\label{fig:pda_eq01}\end{figure}
+
+{\footnotesize
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.2000\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.3500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Transitions of P1]{Transitions of P\textsubscript{1}}\label{tab:eq_delta}\\
+\hline
+\rowcolor{hdr}\textbf{Rule} & \textbf{Transition} & \textbf{Meaning}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Rule} & \textbf{Transition} & \textbf{Meaning}\\ \hline
+\endhead
+Start of a new group & \ensuremath{\delta}(q\textsubscript{0}, 0, Z\textsubscript{0}) = \{(q\textsubscript{1}, 0Z\textsubscript{0})\}\newline \ensuremath{\delta}(q\textsubscript{0}, 1, Z\textsubscript{0}) = \{(q\textsubscript{1}, 1Z\textsubscript{0})\} & Nothing is unmatched, so push the symbol that was read.\\ \hline
+Same symbol & \ensuremath{\delta}(q\textsubscript{1}, 0, 0) = \{(q\textsubscript{1}, 00)\}\newline \ensuremath{\delta}(q\textsubscript{1}, 1, 1) = \{(q\textsubscript{1}, 11)\} & The new symbol is the same as the unmatched ones: one more unmatched symbol.\\ \hline
+Opposite symbol & \ensuremath{\delta}(q\textsubscript{1}, 0, 1) = \{(q\textsubscript{1}, \ensuremath{\varepsilon})\}\newline \ensuremath{\delta}(q\textsubscript{1}, 1, 0) = \{(q\textsubscript{1}, \ensuremath{\varepsilon})\} & The new symbol cancels one unmatched symbol: pop.\\ \hline
+Back to balanced & \ensuremath{\delta}(q\textsubscript{1}, \ensuremath{\varepsilon}, Z\textsubscript{0}) = \{(q\textsubscript{0}, Z\textsubscript{0})\} & Only Z\textsubscript{0} is left, so return to q\textsubscript{0}.\\ \hline
+\end{longtable}}
+
+\textbf{Stack-operation explanation.} The PDA pushes a symbol when the stack holds only Z\textsubscript{0} or the same symbol, and pops when the symbol read is the opposite of the stack top. The height of the stack is the difference between the number of 0s and the number of 1s, and the symbol on the stack tells which of the two is ahead. For example, after reading 001 the stack is 0 Z\textsubscript{0}: one extra 0.
+
+\textbf{Accepted and rejected examples.} Table \ref{tab:eq_tests} lists five accepted and five rejected strings. A string is accepted exactly when \#\textsubscript{0} = \#\textsubscript{1}, and the final state agrees: the PDA ends in q\textsubscript{0} for balanced strings and in q\textsubscript{1} otherwise.
+
+{\small
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.0500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.0600\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.0600\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1200\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Test strings for P1 (1--5 accepted, 6--10 rejected)]{Test strings for P\textsubscript{1} (1--5 accepted, 6--10 rejected)}\label{tab:eq_tests}\\
+\hline
+\rowcolor{hdr}\textbf{\#} & \textbf{Input} & \textbf{\#\textsubscript{0}} & \textbf{\#\textsubscript{1}} & \textbf{Final state} & \textbf{Output} & \textbf{Reason}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{\#} & \textbf{Input} & \textbf{\#\textsubscript{0}} & \textbf{\#\textsubscript{1}} & \textbf{Final state} & \textbf{Output} & \textbf{Reason}\\ \hline
+\endhead
+1 & \ensuremath{\varepsilon} (empty) & 0 & 0 & q\textsubscript{0} & Accepted & No symbols: 0 zeros, 0 ones\\ \hline
+2 & \texttt{10} & 1 & 1 & q\textsubscript{0} & Accepted & One of each\\ \hline
+3 & \texttt{0011} & 2 & 2 & q\textsubscript{0} & Accepted & Two zeros, then two ones\\ \hline
+4 & \texttt{1001} & 2 & 2 & q\textsubscript{0} & Accepted & Balanced in the middle, then balanced again\\ \hline
+5 & \texttt{110100} & 3 & 3 & q\textsubscript{0} & Accepted & Three of each, mixed\\ \hline
+\end{longtable}}
+
+\textbf{Accepted stack trace.} Table \ref{tab:eq_tr1} traces the accepted string 1001.
+
+{\footnotesize
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.0700\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1000\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Stack trace of P1 on 1001 (accepted)]{Stack trace of P\textsubscript{1} on 1001 (accepted)}\label{tab:eq_tr1}\\
+\hline
+\rowcolor{hdr}\textbf{Step} & \textbf{Move} & \textbf{Input left} & \textbf{State} & \textbf{Stack (top first)}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Step} & \textbf{Move} & \textbf{Input left} & \textbf{State} & \textbf{Stack (top first)}\\ \hline
+\endhead
+0 & Start & \texttt{1001} & q\textsubscript{0} & Z\textsubscript{0}\\ \hline
+1 & read \texttt{1}: push \texttt{1} & \texttt{001} & q\textsubscript{1} & \texttt{1}  Z\textsubscript{0}\\ \hline
+2 & read \texttt{0}: opposite of top, pop & \texttt{01} & q\textsubscript{1} & Z\textsubscript{0}\\ \hline
+3 & \ensuremath{\varepsilon}-move: only Z\textsubscript{0} is left, so go back to q\textsubscript{0} & \texttt{01} & q\textsubscript{0} & Z\textsubscript{0}\\ \hline
+4 & read \texttt{0}: push \texttt{0} & \texttt{1} & q\textsubscript{1} & \texttt{0}  Z\textsubscript{0}\\ \hline
+5 & read \texttt{1}: opposite of top, pop & \ensuremath{\varepsilon} & q\textsubscript{1} & Z\textsubscript{0}\\ \hline
+6 & \ensuremath{\varepsilon}-move: only Z\textsubscript{0} is left, so go back to q\textsubscript{0} & \ensuremath{\varepsilon} & q\textsubscript{0} & Z\textsubscript{0}\\ \hline
+ & \textbf{Accepted}: input finished in q\textsubscript{0} \ensuremath{\in} F &  &  & \\ \hline
+\end{longtable}}
+
+\textbf{Rejected stack trace.} Table \ref{tab:eq_tr2} traces the rejected string 011, which has one extra 1.
+
+{\footnotesize
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.0700\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1000\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Stack trace of P1 on 011 (rejected)]{Stack trace of P\textsubscript{1} on 011 (rejected)}\label{tab:eq_tr2}\\
+\hline
+\rowcolor{hdr}\textbf{Step} & \textbf{Move} & \textbf{Input left} & \textbf{State} & \textbf{Stack (top first)}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Step} & \textbf{Move} & \textbf{Input left} & \textbf{State} & \textbf{Stack (top first)}\\ \hline
+\endhead
+0 & Start & \texttt{011} & q\textsubscript{0} & Z\textsubscript{0}\\ \hline
+1 & read \texttt{0}: push \texttt{0} & \texttt{11} & q\textsubscript{1} & \texttt{0}  Z\textsubscript{0}\\ \hline
+2 & read \texttt{1}: opposite of top, pop & \texttt{1} & q\textsubscript{1} & Z\textsubscript{0}\\ \hline
+3 & \ensuremath{\varepsilon}-move: only Z\textsubscript{0} is left, so go back to q\textsubscript{0} & \texttt{1} & q\textsubscript{0} & Z\textsubscript{0}\\ \hline
+4 & read \texttt{1}: push \texttt{1} & \ensuremath{\varepsilon} & q\textsubscript{1} & \texttt{1}  Z\textsubscript{0}\\ \hline
+ & \textbf{Rejected}: input finished in q\textsubscript{1} \ensuremath{\notin} F &  &  & \\ \hline
+\end{longtable}}
+
+\textbf{Ambiguity discussion.} G\textsubscript{1} is ambiguous: the string 0101 has two different leftmost derivations, and therefore two parse trees.
+
+\begin{center}(a)  S \ensuremath{\Rightarrow} SS \ensuremath{\Rightarrow} 0S1S \ensuremath{\Rightarrow} 01S \ensuremath{\Rightarrow} 010S1 \ensuremath{\Rightarrow} 0101\end{center}
+
+\begin{center}(b)  S \ensuremath{\Rightarrow} 0S1 \ensuremath{\Rightarrow} 01S01 \ensuremath{\Rightarrow} 0101\end{center}
+
+In (a) the string is split as 01 and 01; in (b) the inner 10 is wrapped by 0 \ldots{} 1. Ambiguity belongs to the grammar and not to the language: the same language has the unambiguous grammar S \ensuremath{\rightarrow} 0A1S | 1B0S | \ensuremath{\varepsilon}, A \ensuremath{\rightarrow} 0A1A | \ensuremath{\varepsilon}, B \ensuremath{\rightarrow} 1B0B | \ensuremath{\varepsilon}. The PDA is not affected by this, because it works directly on the input.
+
+\textbf{Determinism discussion.} P\textsubscript{1} is a deterministic PDA. For each state, input symbol and stack top there is at most one move. The only \ensuremath{\varepsilon}-move is \ensuremath{\delta}(q\textsubscript{1}, \ensuremath{\varepsilon}, Z\textsubscript{0}), and in q\textsubscript{1} no move reads an input symbol when Z\textsubscript{0} is on top, so the \ensuremath{\varepsilon}-move never competes with another move.
+
+\textbf{Why a finite automaton is insufficient.} Suppose a DFA with k states accepted L\textsubscript{eq}. Among the k + 1 strings 0\textsuperscript{0}, 0\textsuperscript{1}, \ldots{}, 0\textsuperscript{k} two, say 0\textsuperscript{i} and 0\textsuperscript{j} with i \ensuremath{\neq} j, end in the same state. Since 0\textsuperscript{i}1\textsuperscript{i} is accepted, 0\textsuperscript{j}1\textsuperscript{i} would be accepted too, but it has a different number of 0s and 1s. This contradiction shows that no DFA exists; the stack can count without any limit.
+
+\textbf{Conclusion.} Equal numbers of 0s and 1s is a context-free language with a simple grammar and a two-state deterministic PDA whose stack records the surplus. The grammar G\textsubscript{1} is ambiguous, but this does not affect the PDA.
+
+\subsection{Case Study 2 -- DNA Sequences Equal to Their Reverse Complement}
+
+\textbf{Problem definition.} In DNA the base A pairs with T, and C pairs with G. The \textit{reverse complement} of a sequence w, written rc(w), is found by replacing every base with its partner and then reading the result backwards. For example, rc(GAATTC) = GAATTC. The task is to decide whether a DNA sequence is equal to its own reverse complement.
+
+\textbf{Practical application.} Many restriction enzymes cut DNA at sites that equal their own reverse complement, for example EcoRI at GAATTC, BamHI at GGATCC and HindIII at AAGCTT [6]. Bioinformatics tools search sequences for such sites, and the same pairing pattern also describes hairpin (stem-loop) structures.
+
+\textbf{Input alphabet.} \ensuremath{\Sigma} = \{A, C, G, T\}.
+
+\textbf{Formal language.} L\textsubscript{dna} = \{ w \ensuremath{\in} \ensuremath{\Sigma}\textsuperscript{*} | w = rc(w) \}. Every string in L\textsubscript{dna} has even length: in an odd-length string the middle base would have to be its own partner, which no base is. The strings are exactly those of the form u \ensuremath{\cdot} rc(u). Examples: AT, ACGT, GAATTC. Non-examples: AA, GAT, GAATTG.
+
+\textbf{Context-free grammar.} G\textsubscript{2} = (V, T, P, S) with V = \{S\}, T = \{A, C, G, T\}, start symbol S and productions:
+
+\begin{center}S \ensuremath{\rightarrow} AST  |  TSA  |  CSG  |  GSC  |  \ensuremath{\varepsilon}\end{center}
+
+\textbf{Explanation of productions.} Each of the four recursive rules puts a base on the left end and its partner on the right end of a string that already satisfies the rule. S \ensuremath{\rightarrow} \ensuremath{\varepsilon} ends the process with the empty centre. A string is built from the outside to the inside, one pair at a time.
+
+\textbf{Derivation of a sample string.} A leftmost derivation of GAATTC (the EcoRI site):
+
+\begin{center}S \ensuremath{\Rightarrow} GSC \ensuremath{\Rightarrow} GASTC \ensuremath{\Rightarrow} GAASTTC \ensuremath{\Rightarrow} GAATTC\end{center}
+
+The three pairs are G--C on the outside, A--T next, and A--T in the middle.
+
+\textbf{Parse tree.} Fig. \ref{fig:tree_dna} shows the parse tree of GAATTC.
+
+\begin{figure}[H]\centering\includegraphics[width=6.50in]{figures/tree_dna.png}\caption[Parse tree of GAATTC in G2]{Parse tree of GAATTC in G\textsubscript{2}. Each level adds one base on the left and its partner on the right.}\label{fig:tree_dna}\end{figure}
+
+\textbf{PDA construction.} P\textsubscript{2} = (Q, \ensuremath{\Sigma}, \ensuremath{\Gamma}, \ensuremath{\delta}, q\textsubscript{0}, Z\textsubscript{0}, F) with Q = \{q\textsubscript{0}, q\textsubscript{1}, q\textsubscript{2}\}, \ensuremath{\Sigma} = \{A, C, G, T\}, \ensuremath{\Gamma} = \{A, C, G, T, Z\textsubscript{0}\} and F = \{q\textsubscript{2}\}. In the push phase (q\textsubscript{0}) the PDA pushes the \textit{partner} of every base it reads. It then guesses the middle and moves to q\textsubscript{1}, where every input base must equal the stack top and is matched by a pop. Here b\ensuremath{'} means the partner of b: A\ensuremath{'} = T, T\ensuremath{'} = A, C\ensuremath{'} = G, G\ensuremath{'} = C.
+
+\textbf{PDA transition diagram.} See Fig. \ref{fig:pda_dna}; the details are in Table \ref{tab:dna_delta}.
+
+\begin{figure}[H]\centering\includegraphics[width=6.60in]{figures/pda_dna.png}\caption[PDA P2 for DNA sequences equal to their reverse complement: push partners, guess the middle, match, accept]{PDA P\textsubscript{2} for DNA sequences equal to their reverse complement: push partners, guess the middle, match, accept.}\label{fig:pda_dna}\end{figure}
+
+{\footnotesize
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.2000\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4200\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.3800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Transitions of P2 (b \ensuremath{\in} \ensuremath{\Sigma}, X \ensuremath{\in} \ensuremath{\Gamma})]{Transitions of P\textsubscript{2} (b \ensuremath{\in} \ensuremath{\Sigma}, X \ensuremath{\in} \ensuremath{\Gamma})}\label{tab:dna_delta}\\
+\hline
+\rowcolor{hdr}\textbf{Rule} & \textbf{Transition} & \textbf{Meaning}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Rule} & \textbf{Transition} & \textbf{Meaning}\\ \hline
+\endhead
+Push & \ensuremath{\delta}(q\textsubscript{0}, b, X) = \{(q\textsubscript{0}, b\ensuremath{'}X)\} & Read b and push its partner b\ensuremath{'}.\\ \hline
+Guess the middle & \ensuremath{\delta}(q\textsubscript{0}, \ensuremath{\varepsilon}, X) = \{(q\textsubscript{1}, X)\} & The first half is finished; start matching.\\ \hline
+Match & \ensuremath{\delta}(q\textsubscript{1}, b, b) = \{(q\textsubscript{1}, \ensuremath{\varepsilon})\} & Input base equals the stack top: pop it.\\ \hline
+Accept & \ensuremath{\delta}(q\textsubscript{1}, \ensuremath{\varepsilon}, Z\textsubscript{0}) = \{(q\textsubscript{2}, Z\textsubscript{0})\} & Only Z\textsubscript{0} is left and the input is finished.\\ \hline
+\end{longtable}}
+
+\textbf{Stack-operation explanation.} Pushing the partner of each base of the first half u leaves the stack holding rc(u) read from the top. The second half is then compared with the stack top, one base at a time. For GAATTC the pushes are C, T, T, which gives the stack T T C Z\textsubscript{0}; the second half TTC then matches T, T and C in turn.
+
+\textbf{Accepted and rejected examples.} Table \ref{tab:dna_tests} gives five accepted and five rejected sequences. A sequence is accepted exactly when it equals its reverse complement, which the third column shows.
+
+{\small
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.0500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4600\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Test sequences for P2 (1--5 accepted, 6--10 rejected)]{Test sequences for P\textsubscript{2} (1--5 accepted, 6--10 rejected)}\label{tab:dna_tests}\\
+\hline
+\rowcolor{hdr}\textbf{\#} & \textbf{Sequence w} & \textbf{rc(w)} & \textbf{Output} & \textbf{Reason}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{\#} & \textbf{Sequence w} & \textbf{rc(w)} & \textbf{Output} & \textbf{Reason}\\ \hline
+\endhead
+1 & \texttt{AT} & \texttt{AT} & Accepted & A pairs with T\\ \hline
+2 & \texttt{ACGT} & \texttt{ACGT} & Accepted & A--T on the outside, C--G inside\\ \hline
+3 & \texttt{GAATTC} & \texttt{GAATTC} & Accepted & EcoRI site\\ \hline
+4 & \texttt{GGATCC} & \texttt{GGATCC} & Accepted & BamHI site\\ \hline
+5 & \texttt{AAGCTT} & \texttt{AAGCTT} & Accepted & HindIII site\\ \hline
+\end{longtable}}
+
+\textbf{Accepted stack trace.} Table \ref{tab:dna_tr1} follows the accepting computation for GAATTC, in which the middle is guessed after three bases.
+
+{\footnotesize
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.0700\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1000\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Stack trace of P2 on GAATTC (accepted)]{Stack trace of P\textsubscript{2} on GAATTC (accepted)}\label{tab:dna_tr1}\\
+\hline
+\rowcolor{hdr}\textbf{Step} & \textbf{Move} & \textbf{Input left} & \textbf{State} & \textbf{Stack (top first)}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Step} & \textbf{Move} & \textbf{Input left} & \textbf{State} & \textbf{Stack (top first)}\\ \hline
+\endhead
+0 & Start & \texttt{GAATTC} & q\textsubscript{0} & Z\textsubscript{0}\\ \hline
+1 & read \texttt{G}: push its partner \texttt{C} & \texttt{AATTC} & q\textsubscript{0} & \texttt{C}  Z\textsubscript{0}\\ \hline
+2 & read \texttt{A}: push its partner \texttt{T} & \texttt{ATTC} & q\textsubscript{0} & \texttt{T}  \texttt{C}  Z\textsubscript{0}\\ \hline
+3 & read \texttt{A}: push its partner \texttt{T} & \texttt{TTC} & q\textsubscript{0} & \texttt{T}  \texttt{T}  \texttt{C}  Z\textsubscript{0}\\ \hline
+4 & \ensuremath{\varepsilon}-move: guess that the middle is here, go to q\textsubscript{1} & \texttt{TTC} & q\textsubscript{1} & \texttt{T}  \texttt{T}  \texttt{C}  Z\textsubscript{0}\\ \hline
+5 & read \texttt{T}: equals top, pop & \texttt{TC} & q\textsubscript{1} & \texttt{T}  \texttt{C}  Z\textsubscript{0}\\ \hline
+6 & read \texttt{T}: equals top, pop & \texttt{C} & q\textsubscript{1} & \texttt{C}  Z\textsubscript{0}\\ \hline
+7 & read \texttt{C}: equals top, pop & \ensuremath{\varepsilon} & q\textsubscript{1} & Z\textsubscript{0}\\ \hline
+8 & \ensuremath{\varepsilon}-move: only Z\textsubscript{0} left, go to q\textsubscript{2} & \ensuremath{\varepsilon} & q\textsubscript{2} & Z\textsubscript{0}\\ \hline
+ & \textbf{Accepted}: input finished in q\textsubscript{2} \ensuremath{\in} F &  &  & \\ \hline
+\end{longtable}}
+
+\textbf{Rejected stack trace.} Table \ref{tab:dna_tr2} follows the best computation for GAATTG. Only a guess after exactly three bases can leave the stack and the input equally long, and every other guess fails at once with unmatched input or leftover stack. After the right guess the last base G meets the stack top C, so no move is possible and the string is rejected.
+
+{\footnotesize
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.0700\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1000\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Stack trace of P2 on GAATTG (rejected)]{Stack trace of P\textsubscript{2} on GAATTG (rejected)}\label{tab:dna_tr2}\\
+\hline
+\rowcolor{hdr}\textbf{Step} & \textbf{Move} & \textbf{Input left} & \textbf{State} & \textbf{Stack (top first)}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Step} & \textbf{Move} & \textbf{Input left} & \textbf{State} & \textbf{Stack (top first)}\\ \hline
+\endhead
+0 & Start & \texttt{GAATTG} & q\textsubscript{0} & Z\textsubscript{0}\\ \hline
+1 & read \texttt{G}: push its partner \texttt{C} & \texttt{AATTG} & q\textsubscript{0} & \texttt{C}  Z\textsubscript{0}\\ \hline
+2 & read \texttt{A}: push its partner \texttt{T} & \texttt{ATTG} & q\textsubscript{0} & \texttt{T}  \texttt{C}  Z\textsubscript{0}\\ \hline
+3 & read \texttt{A}: push its partner \texttt{T} & \texttt{TTG} & q\textsubscript{0} & \texttt{T}  \texttt{T}  \texttt{C}  Z\textsubscript{0}\\ \hline
+4 & \ensuremath{\varepsilon}-move: guess that the middle is here, go to q\textsubscript{1} & \texttt{TTG} & q\textsubscript{1} & \texttt{T}  \texttt{T}  \texttt{C}  Z\textsubscript{0}\\ \hline
+5 & read \texttt{T}: equals top, pop & \texttt{TG} & q\textsubscript{1} & \texttt{T}  \texttt{C}  Z\textsubscript{0}\\ \hline
+6 & read \texttt{T}: equals top, pop & \texttt{G} & q\textsubscript{1} & \texttt{C}  Z\textsubscript{0}\\ \hline
+7 & read \texttt{G}: no move (top is \texttt{C}) & \texttt{G} & q\textsubscript{1} & \texttt{C}  Z\textsubscript{0}\\ \hline
+ & \textbf{Rejected}: this computation is stuck &  &  & \\ \hline
+\end{longtable}}
+
+\textbf{Ambiguity discussion.} G\textsubscript{2} is unambiguous. The first base of a non-empty string decides which of the four recursive productions is used, and S \ensuremath{\rightarrow} \ensuremath{\varepsilon} is used only when nothing is left, so every string has exactly one parse tree.
+
+\textbf{Determinism discussion.} P\textsubscript{2} is nondeterministic. In q\textsubscript{0} it can either read a base and push, or take the \ensuremath{\varepsilon}-move to q\textsubscript{1}, on the same stack top. Nothing in the input marks the middle, so the PDA must guess, and it accepts if some guess works. As for even-length palindromes such as ww\textsuperscript{R}, no deterministic PDA can recognise this language, so the nondeterminism is needed.
+
+\textbf{Why a finite automaton is insufficient.} The first half can be any of 4\textsuperscript{k} different sequences of length k, and each needs a different second half. A DFA with fewer than 4\textsuperscript{k} states must end in the same state for two different first halves u \ensuremath{\neq} v. Since u \ensuremath{\cdot} rc(u) is accepted, v \ensuremath{\cdot} rc(u) would also be accepted, but it is not equal to its reverse complement. So the first half must be stored without any limit, which is what the stack does.
+
+\textbf{Conclusion.} Palindromic DNA sites are a context-free language with an unambiguous four-pair grammar. The PDA pushes partners, guesses the middle and compares in reverse order, and its nondeterminism cannot be removed.
+
+\subsection{Case Study 3 -- Balanced Opening and Closing Symbols in a Data Sequence}
+
+\textbf{Problem definition.} A data sequence contains round brackets ( ) and square brackets [ ]. The sequence is valid when every opening symbol is closed by a symbol of the same type, in the correct order. So the number of opening and closing symbols must be equal, and they must also be properly nested: ([]) is valid, but ([)] and (] are not.
+
+\textbf{Practical application.} Structured data such as JSON and XML, and program code, use matching brackets. A quick bracket check before parsing finds many errors early and gives a clear error position.
+
+\textbf{Input alphabet.} \ensuremath{\Sigma} = \{(, ), [, ]\}.
+
+\textbf{Formal language.} L\textsubscript{bal} is the set of strings over \ensuremath{\Sigma} in which every opening symbol is matched by a later closing symbol of the same type, and every pair encloses a correctly matched string. Examples: \ensuremath{\varepsilon}, (), ([]), [()](), ([])[()]. Non-examples: (, ], (], ([)], ())(.
+
+\textbf{Context-free grammar.} G\textsubscript{3} = (V, T, P, S) with V = \{S\}, T = \{(, ), [, ]\}, start symbol S and productions:
+
+\begin{center}S \ensuremath{\rightarrow} ( S ) S  |  [ S ] S  |  \ensuremath{\varepsilon}\end{center}
+
+\textbf{Explanation of productions.} The rule S \ensuremath{\rightarrow} ( S ) S says: write an opening bracket, a balanced string inside it, the closing bracket, and then any further balanced string. S \ensuremath{\rightarrow} [ S ] S does the same for square brackets. S \ensuremath{\rightarrow} \ensuremath{\varepsilon} allows an empty inside or an empty remainder. The matching pair is always created together, so the types always agree.
+
+\textbf{Derivation of a sample string.} A leftmost derivation of ([]):
+
+\begin{center}S \ensuremath{\Rightarrow} (S)S \ensuremath{\Rightarrow} ([S]S)S \ensuremath{\Rightarrow} ([]S)S \ensuremath{\Rightarrow} ([])S \ensuremath{\Rightarrow} ([])\end{center}
+
+\textbf{Parse tree.} Fig. \ref{fig:tree_bal} shows the parse tree of ([]). The square pair lies inside the round pair, as the tree shows.
+
+\begin{figure}[H]\centering\includegraphics[width=6.50in]{figures/tree_bal.png}\caption[Parse tree of ([]) in G3]{Parse tree of ([]) in G\textsubscript{3}. The inner S below the opening ( produces the pair [ ].}\label{fig:tree_bal}\end{figure}
+
+\textbf{PDA construction.} P\textsubscript{3} = (Q, \ensuremath{\Sigma}, \ensuremath{\Gamma}, \ensuremath{\delta}, q\textsubscript{0}, Z\textsubscript{0}, F) with Q = \{q\textsubscript{0}, q\textsubscript{1}\}, \ensuremath{\Sigma} = \{(, ), [, ]\}, \ensuremath{\Gamma} = \{(, [, Z\textsubscript{0}\} and F = \{q\textsubscript{0}\}. The stack holds the brackets that are still open, with the most recent one on top. In q\textsubscript{0} nothing is open; in q\textsubscript{1} at least one bracket is open.
+
+\textbf{PDA transition diagram.} See Fig. \ref{fig:pda_bal}; the details are in Table \ref{tab:bal_delta}.
+
+\begin{figure}[H]\centering\includegraphics[width=6.60in]{figures/pda_bal.png}\caption[PDA P3 for balanced brackets]{PDA P\textsubscript{3} for balanced brackets. o stands for an opening symbol, ( or [. q\textsubscript{0} means nothing is open.}\label{fig:pda_bal}\end{figure}
+
+{\footnotesize
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.2200\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4600\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.3200\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Transitions of P3]{Transitions of P\textsubscript{3}}\label{tab:bal_delta}\\
+\hline
+\rowcolor{hdr}\textbf{Rule} & \textbf{Transition} & \textbf{Meaning}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Rule} & \textbf{Transition} & \textbf{Meaning}\\ \hline
+\endhead
+First opening symbol & \ensuremath{\delta}(q\textsubscript{0}, o, Z\textsubscript{0}) = \{(q\textsubscript{1}, oZ\textsubscript{0})\}  for o \ensuremath{\in} \{\texttt{(}, \texttt{[}\} & Nothing is open: push the opening symbol.\\ \hline
+Further opening symbol & \ensuremath{\delta}(q\textsubscript{1}, o, X) = \{(q\textsubscript{1}, oX)\}  for o and X in \{\texttt{(}, \texttt{[}\} & Push the new opening symbol on top.\\ \hline
+Close a round pair & \ensuremath{\delta}(q\textsubscript{1}, \texttt{)}, \texttt{(}) = \{(q\textsubscript{1}, \ensuremath{\varepsilon})\} & Top is ( : pop it.\\ \hline
+Close a square pair & \ensuremath{\delta}(q\textsubscript{1}, \texttt{]}, \texttt{[}) = \{(q\textsubscript{1}, \ensuremath{\varepsilon})\} & Top is [ : pop it.\\ \hline
+Back to nothing open & \ensuremath{\delta}(q\textsubscript{1}, \ensuremath{\varepsilon}, Z\textsubscript{0}) = \{(q\textsubscript{0}, Z\textsubscript{0})\} & Only Z\textsubscript{0} is left: return to q\textsubscript{0}.\\ \hline
+\end{longtable}}
+
+\textbf{Stack-operation explanation.} Every opening symbol is pushed. A closing symbol may be read only if the stack top is its own opening symbol, and then that symbol is popped. If the top is the other type, or the stack holds only Z\textsubscript{0}, there is no move and the PDA stops. The input is valid when the PDA finishes in q\textsubscript{0}, that is, with only Z\textsubscript{0} on the stack.
+
+\textbf{Accepted and rejected examples.} Table \ref{tab:bal_tests} gives five accepted and five rejected sequences. The ``Stack at stop'' column shows the stack when the PDA finished or got stuck.
+
+{\footnotesize
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.0500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1600\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1700\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1600\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1200\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.3400\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Test sequences for P3 (1--5 accepted, 6--10 rejected)]{Test sequences for P\textsubscript{3} (1--5 accepted, 6--10 rejected)}\label{tab:bal_tests}\\
+\hline
+\rowcolor{hdr}\textbf{\#} & \textbf{Input} & \textbf{State at stop} & \textbf{Stack at stop} & \textbf{Output} & \textbf{Reason}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{\#} & \textbf{Input} & \textbf{State at stop} & \textbf{Stack at stop} & \textbf{Output} & \textbf{Reason}\\ \hline
+\endhead
+1 & \texttt{()} & q\textsubscript{0} & Z\textsubscript{0} & Accepted & One round pair\\ \hline
+2 & \texttt{([])} & q\textsubscript{0} & Z\textsubscript{0} & Accepted & Square pair inside a round pair\\ \hline
+3 & \texttt{[()]()} & q\textsubscript{0} & Z\textsubscript{0} & Accepted & A nested pair followed by a pair\\ \hline
+4 & \texttt{([])[()]} & q\textsubscript{0} & Z\textsubscript{0} & Accepted & Two nested pairs side by side\\ \hline
+5 & \texttt{[[]]} & q\textsubscript{0} & Z\textsubscript{0} & Accepted & Same type nested twice\\ \hline
+6 & \texttt{(} & q\textsubscript{1} & \texttt{(}  Z\textsubscript{0} & Rejected & Never closed: ( is still on the stack at the end\\ \hline
+7 & \texttt{]} & q\textsubscript{0} (no move) & Z\textsubscript{0} & Rejected & Closing symbol with nothing open\\ \hline
+8 & \texttt{(]} & q\textsubscript{1} (no move) & \texttt{(}  Z\textsubscript{0} & Rejected & Wrong type: ] cannot close (\\ \hline
+9 & \texttt{([)]} & q\textsubscript{1} (no move) & \texttt{[}  \texttt{(}  Z\textsubscript{0} & Rejected & Crossing brackets: ) meets [ on top\\ \hline
+10 & \texttt{())(} & q\textsubscript{0} (no move) & Z\textsubscript{0} & Rejected & Extra ): the second ) finds only Z\textsubscript{0}\\ \hline
+\end{longtable}}
+
+\textbf{Accepted stack trace.} Table \ref{tab:bal_tr1} traces the accepted sequence ([]).
+
+{\footnotesize
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.0700\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1000\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Stack trace of P3 on ([]) (accepted)]{Stack trace of P\textsubscript{3} on ([]) (accepted)}\label{tab:bal_tr1}\\
+\hline
+\rowcolor{hdr}\textbf{Step} & \textbf{Move} & \textbf{Input left} & \textbf{State} & \textbf{Stack (top first)}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Step} & \textbf{Move} & \textbf{Input left} & \textbf{State} & \textbf{Stack (top first)}\\ \hline
+\endhead
+0 & Start & \texttt{([])} & q\textsubscript{0} & Z\textsubscript{0}\\ \hline
+1 & read \texttt{(}: push \texttt{(} & \texttt{[])} & q\textsubscript{1} & \texttt{(}  Z\textsubscript{0}\\ \hline
+2 & read \texttt{[}: push \texttt{[} & \texttt{])} & q\textsubscript{1} & \texttt{[}  \texttt{(}  Z\textsubscript{0}\\ \hline
+3 & read \texttt{]}: matches top \texttt{[}, pop & \texttt{)} & q\textsubscript{1} & \texttt{(}  Z\textsubscript{0}\\ \hline
+4 & read \texttt{)}: matches top \texttt{(}, pop & \ensuremath{\varepsilon} & q\textsubscript{1} & Z\textsubscript{0}\\ \hline
+5 & \ensuremath{\varepsilon}-move: only Z\textsubscript{0} is left, so go back to q\textsubscript{0} & \ensuremath{\varepsilon} & q\textsubscript{0} & Z\textsubscript{0}\\ \hline
+ & \textbf{Accepted}: input finished in q\textsubscript{0} \ensuremath{\in} F &  &  & \\ \hline
+\end{longtable}}
+
+\textbf{Rejected stack trace.} Table \ref{tab:bal_tr2} traces the rejected sequence ([)], in which the brackets cross.
+
+{\footnotesize
+\begin{longtable}{|>{\centering\arraybackslash}p{\dimexpr 0.0700\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.4300\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.1500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\centering\arraybackslash}p{\dimexpr 0.1000\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2500\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Stack trace of P3 on ([)] (rejected)]{Stack trace of P\textsubscript{3} on ([)] (rejected)}\label{tab:bal_tr2}\\
+\hline
+\rowcolor{hdr}\textbf{Step} & \textbf{Move} & \textbf{Input left} & \textbf{State} & \textbf{Stack (top first)}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr}\textbf{Step} & \textbf{Move} & \textbf{Input left} & \textbf{State} & \textbf{Stack (top first)}\\ \hline
+\endhead
+0 & Start & \texttt{([)]} & q\textsubscript{0} & Z\textsubscript{0}\\ \hline
+1 & read \texttt{(}: push \texttt{(} & \texttt{[)]} & q\textsubscript{1} & \texttt{(}  Z\textsubscript{0}\\ \hline
+2 & read \texttt{[}: push \texttt{[} & \texttt{)]} & q\textsubscript{1} & \texttt{[}  \texttt{(}  Z\textsubscript{0}\\ \hline
+3 & read \texttt{)}: no move (top is \texttt{[}) & \texttt{)]} & q\textsubscript{1} & \texttt{[}  \texttt{(}  Z\textsubscript{0}\\ \hline
+ & \textbf{Rejected}: no move is possible &  &  & \\ \hline
+\end{longtable}}
+
+\textbf{Ambiguity discussion.} G\textsubscript{3} is unambiguous. The first symbol of a non-empty string decides between ( S ) S and [ S ] S. Its partner is the first closing symbol at which the opening and closing symbols read so far are equal in number, so the string splits in exactly one way and has exactly one parse tree.
+
+\textbf{Determinism discussion.} P\textsubscript{3} is a deterministic PDA. Opening and closing symbols are different, so the PDA never has to guess; the stack top selects the only possible pop. The single \ensuremath{\varepsilon}-move \ensuremath{\delta}(q\textsubscript{1}, \ensuremath{\varepsilon}, Z\textsubscript{0}) does not compete with any input move, because in q\textsubscript{1} no move reads an input symbol when Z\textsubscript{0} is on top.
+
+\textbf{Why a finite automaton is insufficient.} Brackets can be nested to any depth. A DFA with k states reading the k + 1 strings (\textsuperscript{0}, (\textsuperscript{1}, \ldots{}, (\textsuperscript{k} must end in the same state for two of them, say (\textsuperscript{i} and (\textsuperscript{j} with i \ensuremath{\neq} j. Then it cannot tell that (\textsuperscript{i})\textsuperscript{i} is valid while (\textsuperscript{j})\textsuperscript{i} is not. A stack remembers the depth and the types without limit.
+
+\textbf{Conclusion.} Balanced brackets form a context-free language with a short unambiguous grammar and a two-state deterministic PDA. The stack stores exactly the brackets that are still open, which is why it matches both depth and type.
+
+\subsection{Task 3 Comparative Analysis}
+
+{\footnotesize
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr 0.1800\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2700\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2900\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.2600\textwidth-2\tabcolsep-1.5\arrayrulewidth\relax}|}
+\caption[Summary of the three case studies]{Summary of the three case studies}\label{tab:t3_compare}\\
+\hline
+\rowcolor{hdr} & \textbf{Equal 0s and 1s} & \textbf{DNA reverse complement} & \textbf{Balanced brackets}\\ \hline
+\endfirsthead
+\hline
+\rowcolor{hdr} & \textbf{Equal 0s and 1s} & \textbf{DNA reverse complement} & \textbf{Balanced brackets}\\ \hline
+\endhead
+Alphabet & \{0, 1\} & \{A, C, G, T\} & \{(, ), [, ]\}\\ \hline
+Language in words & equal numbers of 0s and 1s, any order & sequence equals its reverse complement & every opening symbol closed by its own type, in order\\ \hline
+Grammar & S \ensuremath{\rightarrow} 0S1 | 1S0 | SS | \ensuremath{\varepsilon} & S \ensuremath{\rightarrow} AST | TSA | CSG | GSC | \ensuremath{\varepsilon} & S \ensuremath{\rightarrow} (S)S | [S]S | \ensuremath{\varepsilon}\\ \hline
+Stack holds & the unmatched symbols (a count) & partners of the first half & the brackets that are still open\\ \hline
+PDA states & 2 & 3 & 2\\ \hline
+Deterministic? & Yes & No: it must guess the middle & Yes\\ \hline
+Grammar ambiguous? & Yes (an unambiguous one exists) & No & No\\ \hline
+Why a DFA fails & difference of counts is unbounded & first half is unbounded & nesting depth is unbounded\\ \hline
+\end{longtable}}
+
+\textbf{The role of the stack.} In all three studies the stack supplies the unlimited memory that a DFA lacks. It is used as a counter in Case Study 1, as a reversing device in Case Study 2, and as a record of open brackets in Case Study 3.
+
+\textbf{Determinism.} A PDA can be deterministic when the input itself shows what to do. Case Studies 1 and 3 are of this kind. In Case Study 2 nothing marks the middle of the sequence, so guessing is unavoidable. This is the same difference that separates a language such as 0\textsuperscript{n}1\textsuperscript{n} from even palindromes.
+
+\textbf{Ambiguity.} Ambiguity is a property of a grammar. G\textsubscript{1} is ambiguous only because of the rule S \ensuremath{\rightarrow} SS, while G\textsubscript{2} and G\textsubscript{3} are unambiguous, since their first symbol always decides the production.
+
+\subsection{Task 3 Conclusion}
+
+Three context-free languages were modelled with a grammar and a PDA each. Equal numbers of 0s and 1s needs a counter, DNA reverse-complement sites need a reversing memory and a guess, and balanced brackets need a record of open symbols. Each grammar was checked by derivation and parse tree, each PDA by stack traces and ten test strings, and in each case a finite automaton is shown to be insufficient.
+
+\section{Overall Conclusion}
+
+Task 2 showed that three everyday validation rules, a four-digit PIN, a password policy and a basic e-mail format, are regular languages with small DFAs. The password policy was handled with five cooperating modules instead of one large machine, so every diagram stayed simple. Task 3 showed three languages that need a stack: equal numbers of 0s and 1s, DNA sequences equal to their reverse complement, and balanced brackets. Together the two tasks show where finite automata are enough and where a pushdown automaton is needed: a DFA suffices when a fixed amount of memory is enough, and a PDA is needed when counting, matching or nesting has no fixed limit. In real systems the automata act as fast and exact syntax checks, and meaning-level checks follow after them.
+
+\section*{References}\addcontentsline{toc}{section}{References}
+
+\begin{enumerate}[label={[\arabic*]},leftmargin=2.2em,itemsep=3pt]
+\item J. E. Hopcroft, R. Motwani and J. D. Ullman, \textit{Introduction to Automata Theory, Languages, and Computation}, 3rd ed., Pearson, 2007.
+\item M. Sipser, \textit{Introduction to the Theory of Computation}, 3rd ed., Cengage Learning, 2012.
+\item P. A. Grassi et al., \textit{Digital Identity Guidelines: Authentication and Lifecycle Management}, NIST Special Publication 800-63B, 2017.
+\item P. Resnick, Ed., ``Internet Message Format,'' IETF RFC 5322, 2008.
+\item Course notes for 21CSC301T Formal Language and Automata, Units 1--4, SRM Institute of Science and Technology, Tiruchirappalli, 2026.
+\item B. Alberts et al., \textit{Molecular Biology of the Cell}, 6th ed., Garland Science, 2014.
+\end{enumerate}
+
+\end{document}
